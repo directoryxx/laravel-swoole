@@ -1,8 +1,8 @@
 FROM php:8.0-fpm-buster
 
-
 # Copy composer.lock and composer.json
-# COPY composer.lock composer.json /var/www/
+COPY composer.lock composer.json /var/www/html
+COPY run.sh /var/www/html
 
 # Set working directory
 WORKDIR /var/www/html
@@ -48,6 +48,8 @@ RUN docker-php-ext-install gd
 RUN docker-php-ext-install opcache
 RUN docker-php-ext-configure intl \
 	&& docker-php-ext-install intl
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -72,17 +74,35 @@ RUN touch /usr/local/etc/php/conf.d/swoole.ini && \
     echo 'extension=swoole.so' > /usr/local/etc/php/conf.d/swoole.ini
 
 
+# Add NodeJS for watcher swoole
+RUN apt update && apt install -y nodejs npm
+
+# Install Supervisor
+#RUN apt-get update && apt-get install -y supervisor
+
+# Copy Configuration Supervisor
+#COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+#RUN mkdir -p /var/log/supervisor
 
 # Copy existing application directory contents
-#COPY . /var/www/html
+COPY . /var/www/html
 
 # Copy existing application directory permissions
-#COPY --chown=www:www . /var/www/html
+COPY --chown=www:www . /var/www/html
 
 #RUN chown -R www-data:www-data /var/www/html/storage/framework
 #RUN chown -R www-data:www-data /var/www/html/storage/logs
 
-
 USER www
 
+# Exectuable Entrypoint
+RUN chmod +x /var/www/html/run.sh
+
+# Install Package
+RUN composer install
+RUN npm i colors chokidar is-running
+
 EXPOSE 1215
+
+ENTRYPOINT ["sh","/var/www/html/run.sh"]
