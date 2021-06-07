@@ -105,4 +105,5 @@ RUN npm i colors chokidar is-running
 
 EXPOSE 1215
 
-ENTRYPOINT ["sh","/var/www/html/run.sh"]
+# Disable for local development
+#ENTRYPOINT ["sh","/var/www/html/run.sh"]
